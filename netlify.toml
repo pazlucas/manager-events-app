@@ -1,0 +1,8 @@
+# Netlify compila la versión web en cada push a main.
+[build]
+  command = "npx expo export --platform web"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  EXPO_PUBLIC_API_URL = "https://manager-events-api.onrender.com"
