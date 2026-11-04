@@ -58,7 +58,9 @@ export default function ExpenseDetailScreen() {
           <Title>{expense.description}</Title>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{money(expense.amount)}</Text>
         </Row>
-        {expense.created_by_name && <Muted>Cargado por {expense.created_by_name}</Muted>}
+        {(expense.created_by_email || expense.created_by_name) && (
+          <Muted>Cargado por {expense.created_by_email ?? expense.created_by_name}</Muted>
+        )}
         <View style={{ height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden', marginTop: 6 }}>
           <View
             style={{

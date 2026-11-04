@@ -28,7 +28,7 @@ function RootStack() {
     >
       {/* Sin sesión solo se puede acceder al login; con sesión, al resto de la app. */}
       <Stack.Protected guard={!!user}>
-        <Stack.Screen name="index" options={{ title: 'Mis eventos' }} />
+        <Stack.Screen name="index" options={{ title: 'Gastos de Eventos' }} />
         <Stack.Screen name="events/[id]" options={{ title: 'Evento' }} />
         <Stack.Screen name="expenses/[id]" options={{ title: 'Gasto' }} />
         <Stack.Screen name="event-form" options={{ presentation: 'modal', title: 'Evento' }} />

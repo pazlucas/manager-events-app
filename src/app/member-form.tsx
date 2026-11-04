@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { api } from '@/api';
-import { Button, ErrorBox, Field, Screen } from '@/components/ui';
+import { Button, ErrorBox, Field, Muted, Screen } from '@/components/ui';
 
 export default function MemberFormScreen() {
   const { eventId, id } = useLocalSearchParams<{ eventId: string; id?: string }>();
@@ -45,6 +45,7 @@ export default function MemberFormScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
       />
+      <Muted>Si la persona tiene una cuenta con este email, va a ver el evento y podrá cargar gastos.</Muted>
       <ErrorBox message={error} />
       <Button title="Guardar" onPress={save} loading={saving} disabled={!name.trim()} />
     </Screen>

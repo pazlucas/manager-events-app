@@ -1,35 +1,29 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
 
-import { api, Member } from '@/api';
-import { Button, Chip, ErrorBox, Field, Muted, Screen } from '@/components/ui';
+import { api } from '@/api';
+import { useAuth } from '@/auth/AuthContext';
+import { Button, ErrorBox, Field, Muted, Screen } from '@/components/ui';
 import { parseAmount } from '@/format';
 
 export default function ExpenseFormScreen() {
   const params = useLocalSearchParams<{ eventId?: string; id?: string }>();
   const editing = params.id !== undefined;
-  const [eventId, setEventId] = useState(params.eventId ? Number(params.eventId) : null);
-  const [members, setMembers] = useState<Member[]>([]);
+  const { user } = useAuth();
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [createdBy, setCreatedBy] = useState<number | null>(null);
+  const [author, setAuthor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!editing) return;
     api.expenses.get(Number(params.id)).then((e) => {
-      setEventId(e.event_id);
       setDescription(e.description);
       setAmount(String(e.amount));
-      setCreatedBy(e.created_by_id);
+      setAuthor(e.created_by_email ?? e.created_by_name);
     }, (e) => setError(e.message));
   }, [params.id, editing]);
-
-  useEffect(() => {
-    if (eventId !== null) api.members.list(eventId).then(setMembers, (e) => setError(e.message));
-  }, [eventId]);
 
   async function save() {
     const value = parseAmount(amount);
@@ -39,13 +33,13 @@ export default function ExpenseFormScreen() {
     }
     setSaving(true);
     setError(null);
-    const data = { description: description.trim(), amount: value, created_by_id: createdBy };
+    const data = { description: description.trim(), amount: value };
     try {
       if (editing) {
         await api.expenses.update(Number(params.id), data);
         router.back();
       } else {
-        const created = await api.expenses.create(eventId!, data);
+        const created = await api.expenses.create(Number(params.eventId), data);
         // Lleva directo al detalle para cargar los pagos.
         router.replace(`/expenses/${created.id}`);
       }
@@ -60,17 +54,14 @@ export default function ExpenseFormScreen() {
       <Stack.Screen options={{ title: editing ? 'Editar gasto' : 'Nuevo gasto' }} />
       <Field label="Descripción" value={description} onChangeText={setDescription} placeholder="Ej: Carne" autoFocus />
       <Field label="Monto total" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0,00" />
-      <Muted>¿Quién cargó el gasto? (opcional)</Muted>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {members.map((m) => (
-          <Chip
-            key={m.id}
-            label={m.name}
-            selected={createdBy === m.id}
-            onPress={() => setCreatedBy(createdBy === m.id ? null : m.id)}
-          />
-        ))}
-      </View>
+      {/* El autor lo registra la API con la cuenta que carga el gasto; no se elige a mano. */}
+      <Muted>
+        {editing
+          ? author
+            ? `Cargado por ${author}`
+            : 'Sin autor registrado'
+          : `Se registrará a nombre de ${user?.email}`}
+      </Muted>
       <ErrorBox message={error} />
       <Button title="Guardar" onPress={save} loading={saving} disabled={!description.trim() || !amount} />
     </Screen>

@@ -13,7 +13,12 @@ export interface EventItem {
   member_count: number;
   expense_count: number;
   total_amount: number;
+  owner_name: string | null;
+  /** owner: lo creó el usuario; member: lo agregaron como miembro con su email. */
+  role: EventRole;
 }
+
+export type EventRole = 'owner' | 'member';
 
 export interface Member {
   id: number;
@@ -36,8 +41,10 @@ export interface Expense {
   event_id: number;
   description: string;
   amount: number;
-  created_by_id: number | null;
+  created_by_user_id: number | null;
   created_by_name: string | null;
+  /** Email de la cuenta que cargó el gasto (lo completa la API). */
+  created_by_email: string | null;
   paid_amount: number;
   pending_amount: number;
   is_covered: boolean;
@@ -135,7 +142,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 type EventInput = { name: string; description?: string | null; event_date?: string | null };
 type MemberInput = { name: string; email?: string | null };
-type ExpenseInput = { description: string; amount: number; created_by_id?: number | null };
+type ExpenseInput = { description: string; amount: number };
 type PaymentInput = { member_id: number; amount: number };
 
 export const api = {
@@ -147,7 +154,7 @@ export const api = {
     me: () => request<User>('GET', '/auth/me'),
   },
   events: {
-    list: () => request<EventItem[]>('GET', '/events'),
+    list: (role: EventRole = 'owner') => request<EventItem[]>('GET', `/events?role=${role}`),
     get: (id: number) => request<EventItem>('GET', `/events/${id}`),
     create: (data: EventInput) => request<EventItem>('POST', '/events', data),
     update: (id: number, data: Partial<EventInput>) => request<EventItem>('PATCH', `/events/${id}`, data),

@@ -57,6 +57,8 @@ export default function EventDetailScreen() {
 
   const { event, members, expenses, summary } = data;
   const isOpen = event.status === 'open';
+  // Los miembros pueden cargar gastos y pagos; editar, cerrar o borrar el evento es solo del creador.
+  const isOwner = event.role === 'owner';
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true);
@@ -107,23 +109,26 @@ export default function EventDetailScreen() {
           <Title>{event.name}</Title>
           <Badge label={isOpen ? 'Abierto' : 'Cerrado'} color={isOpen ? colors.success : colors.muted} />
         </Row>
+        {!isOwner && <Muted>Creado por {event.owner_name ?? 'otro usuario'} · Participás como miembro</Muted>}
         {event.event_date && <Muted>{formatDate(event.event_date)}</Muted>}
         {event.description && <Text style={{ color: colors.text }}>{event.description}</Text>}
         <Row style={{ marginTop: 4 }}>
           <Muted>Total de gastos</Muted>
           <Text style={styles.total}>{money(event.total_amount)}</Text>
         </Row>
-        <Row style={{ justifyContent: 'flex-start', marginTop: 6 }}>
-          {isOpen && (
-            <Button small variant="secondary" title="Editar" onPress={() => router.push(`/event-form?id=${id}`)} />
-          )}
-          {isOpen ? (
-            <Button small title="Cerrar evento" onPress={closeEvent} loading={busy} />
-          ) : (
-            <Button small variant="secondary" title="Reabrir" onPress={reopenEvent} loading={busy} />
-          )}
-          <Button small variant="danger" title="Eliminar" onPress={deleteEvent} />
-        </Row>
+        {isOwner && (
+          <Row style={{ justifyContent: 'flex-start', marginTop: 6 }}>
+            {isOpen && (
+              <Button small variant="secondary" title="Editar" onPress={() => router.push(`/event-form?id=${id}`)} />
+            )}
+            {isOpen ? (
+              <Button small title="Cerrar evento" onPress={closeEvent} loading={busy} />
+            ) : (
+              <Button small variant="secondary" title="Reabrir" onPress={reopenEvent} loading={busy} />
+            )}
+            <Button small variant="danger" title="Eliminar" onPress={deleteEvent} />
+          </Row>
+        )}
       </Card>
 
       <View style={styles.tabs}>
@@ -141,7 +146,7 @@ export default function EventDetailScreen() {
       </View>
 
       {tab === 'members' && (
-        <MembersTab eventId={id} members={members} isOpen={isOpen} onChange={(a) => run(a)} />
+        <MembersTab eventId={id} members={members} canManage={isOpen && isOwner} onChange={(a) => run(a)} />
       )}
       {tab === 'expenses' && <ExpensesTab eventId={id} expenses={expenses} members={members} isOpen={isOpen} />}
       {tab === 'summary' && <SummaryTab summary={summary} />}
@@ -152,12 +157,12 @@ export default function EventDetailScreen() {
 function MembersTab({
   eventId,
   members,
-  isOpen,
+  canManage,
   onChange,
 }: {
   eventId: number;
   members: Member[];
-  isOpen: boolean;
+  canManage: boolean;
   onChange: (action: () => Promise<unknown>) => void;
 }) {
   async function remove(m: Member) {
@@ -168,7 +173,9 @@ function MembersTab({
 
   return (
     <>
-      {isOpen && <Button title="+ Agregar miembro" onPress={() => router.push(`/member-form?eventId=${eventId}`)} />}
+      {canManage && (
+        <Button title="+ Agregar miembro" onPress={() => router.push(`/member-form?eventId=${eventId}`)} />
+      )}
       {members.length === 0 && <Empty text="Sumá a los participantes del evento." />}
       {members.map((m) => (
         <Card key={m.id}>
@@ -178,7 +185,7 @@ function MembersTab({
               {m.email && <Muted>{m.email}</Muted>}
               <Muted>Pagó {money(m.total_paid)}</Muted>
             </View>
-            {isOpen && (
+            {canManage && (
               <Row>
                 <Button
                   small
@@ -223,7 +230,11 @@ function ExpensesTab({
             <Text style={styles.total}>{money(e.amount)}</Text>
           </Row>
           <Row>
-            <Muted>{e.created_by_name ? `Cargado por ${e.created_by_name}` : `${e.payments.length} pagos`}</Muted>
+            <Muted>
+              {e.created_by_email || e.created_by_name
+                ? `Cargado por ${e.created_by_email ?? e.created_by_name}`
+                : `${e.payments.length} pagos`}
+            </Muted>
             {e.is_covered ? (
               <Badge label="Cubierto" color={colors.success} />
             ) : (
