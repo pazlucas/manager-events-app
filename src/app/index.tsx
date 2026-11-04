@@ -1,16 +1,33 @@
-import { router } from 'expo-router';
-import { Text } from 'react-native';
+import { router, Stack } from 'expo-router';
+import { Pressable, Text } from 'react-native';
 
 import { api } from '@/api';
+import { useAuth } from '@/auth/AuthContext';
+import { confirm } from '@/confirm';
 import { Badge, Button, Card, colors, Empty, ErrorBox, Loading, Muted, Row, Screen, Title } from '@/components/ui';
 import { formatDate, money } from '@/format';
 import { useLoader } from '@/useLoader';
 
 export default function EventsScreen() {
   const { data: events, error } = useLoader(api.events.list, []);
+  const { user, signOut } = useAuth();
+
+  async function logout() {
+    if (await confirm('Cerrar sesión', `¿Salir de la cuenta ${user?.email}?`)) await signOut();
+  }
 
   return (
     <Screen>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable onPress={logout} hitSlop={8} style={{ paddingHorizontal: 8 }}>
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>Salir</Text>
+            </Pressable>
+          ),
+        }}
+      />
+      {user && <Muted>Hola, {user.name}</Muted>}
       <Button title="+ Nuevo evento" onPress={() => router.push('/event-form')} />
       <ErrorBox message={error} />
       {!events && !error && <Loading />}

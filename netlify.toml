@@ -6,3 +6,4 @@
 [build.environment]
   NODE_VERSION = "22"
   EXPO_PUBLIC_API_URL = "https://manager-events-api.onrender.com"
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = "600607480758-pnb2jtqdcr9m3o7gfhqpbm3cri7tv22g.apps.googleusercontent.com"

@@ -73,23 +73,54 @@ export interface Summary {
   created_at: string | null;
 }
 
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  has_password: boolean;
+  has_google: boolean;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: 'bearer';
+  expires_in: number;
+  user: User;
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
   }
 }
 
+let authToken: string | null = null;
+let onUnauthorized: (() => void) | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+/** Se invoca cuando la API rechaza el token (vencido o inválido). */
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler;
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
   let res: Response;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
       method,
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
     throw new ApiError(0, `No se pudo conectar con la API (${BASE_URL})`);
   }
+  if (res.status === 401 && authToken) onUnauthorized?.();
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => null);
   if (!res.ok) {
@@ -108,6 +139,13 @@ type ExpenseInput = { description: string; amount: number; created_by_id?: numbe
 type PaymentInput = { member_id: number; amount: number };
 
 export const api = {
+  auth: {
+    register: (data: { name: string; email: string; password: string }) =>
+      request<AuthResponse>('POST', '/auth/register', data),
+    login: (data: { email: string; password: string }) => request<AuthResponse>('POST', '/auth/login', data),
+    google: (idToken: string) => request<AuthResponse>('POST', '/auth/google', { id_token: idToken }),
+    me: () => request<User>('GET', '/auth/me'),
+  },
   events: {
     list: () => request<EventItem[]>('GET', '/events'),
     get: (id: number) => request<EventItem>('GET', `/events/${id}`),

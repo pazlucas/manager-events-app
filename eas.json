@@ -1,12 +1,35 @@
 {
-  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
-    "development": { "developmentClient": true, "distribution": "internal" },
-    "preview": { "distribution": "internal" },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "600607480758-pnb2jtqdcr9m3o7gfhqpbm3cri7tv22g.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "600607480758-2h13uf5rbb18b5qftu2p2juen4kfc1ni.apps.googleusercontent.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://manager-events-api.onrender.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "600607480758-pnb2jtqdcr9m3o7gfhqpbm3cri7tv22g.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "600607480758-2h13uf5rbb18b5qftu2p2juen4kfc1ni.apps.googleusercontent.com"
+      }
+    },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_API_URL": "https://manager-events-api.onrender.com" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://manager-events-api.onrender.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "600607480758-pnb2jtqdcr9m3o7gfhqpbm3cri7tv22g.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "600607480758-2h13uf5rbb18b5qftu2p2juen4kfc1ni.apps.googleusercontent.com"
+      }
     }
   },
-  "submit": { "production": {} }
+  "submit": {
+    "production": {}
+  }
 }
