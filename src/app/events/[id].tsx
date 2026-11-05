@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { api, EventItem, Expense, Member, Summary } from '@/api';
+import { api, EventItem, Expense, Member, paymentMethodLabel, Summary } from '@/api';
 import { confirm, notify } from '@/confirm';
 import {
   Badge,
@@ -174,14 +174,24 @@ function MembersTab({
   return (
     <>
       {canManage && (
-        <Button title="+ Agregar miembro" onPress={() => router.push(`/member-form?eventId=${eventId}`)} />
+        <Row style={{ justifyContent: 'flex-start' }}>
+          <Button title="+ Agregar miembro" onPress={() => router.push(`/member-form?eventId=${eventId}`)} />
+          <Button
+            variant="secondary"
+            title="Invitar por WhatsApp o email"
+            onPress={() => router.push(`/invite-share?eventId=${eventId}`)}
+          />
+        </Row>
       )}
       {members.length === 0 && <Empty text="Sumá a los participantes del evento." />}
       {members.map((m) => (
         <Card key={m.id}>
           <Row>
             <View style={{ flex: 1 }}>
-              <Title>{m.name}</Title>
+              <Row style={{ justifyContent: 'flex-start' }}>
+                <Title>{m.name}</Title>
+                {m.is_owner && <Badge label="Creador" color={colors.primary} />}
+              </Row>
               {m.email && <Muted>{m.email}</Muted>}
               <Muted>Pagó {money(m.total_paid)}</Muted>
             </View>
@@ -193,7 +203,7 @@ function MembersTab({
                   title="Editar"
                   onPress={() => router.push(`/member-form?eventId=${eventId}&id=${m.id}`)}
                 />
-                <Button small variant="danger" title="Quitar" onPress={() => remove(m)} />
+                {!m.is_owner && <Button small variant="danger" title="Quitar" onPress={() => remove(m)} />}
               </Row>
             )}
           </Row>
@@ -229,6 +239,13 @@ function ExpensesTab({
             <Title>{e.description}</Title>
             <Text style={styles.total}>{money(e.amount)}</Text>
           </Row>
+          {(e.expense_date || e.payment_method) && (
+            <Muted>
+              {[e.expense_date && formatDate(e.expense_date), paymentMethodLabel(e.payment_method)]
+                .filter(Boolean)
+                .join(' · ')}
+            </Muted>
+          )}
           <Row>
             <Muted>
               {e.created_by_email || e.created_by_name

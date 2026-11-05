@@ -85,10 +85,14 @@ export function Button({
   );
 }
 
+export function Label({ children }: { children: ReactNode }) {
+  return <Text style={styles.label}>{children}</Text>;
+}
+
 export function Field({ label, ...props }: TextInputProps & { label: string }) {
   return (
     <View style={{ gap: 6 }}>
-      <Text style={styles.label}>{label}</Text>
+      {label ? <Label>{label}</Label> : null}
       <TextInput placeholderTextColor={colors.muted} {...props} style={[styles.input, props.style]} />
     </View>
   );
@@ -150,6 +154,17 @@ export function Empty({ text }: { text: string }) {
   );
 }
 
+export const inputStyle = {
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 10,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  fontSize: 16,
+  color: colors.text,
+};
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   screenContent: { padding: 16, alignItems: 'center' },
@@ -173,16 +188,7 @@ const styles = StyleSheet.create({
   buttonSmall: { paddingVertical: 7, paddingHorizontal: 12 },
   buttonText: { fontWeight: '600', fontSize: 16 },
   label: { fontSize: 14, fontWeight: '600', color: colors.text },
-  input: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: colors.text,
-  },
+  input: inputStyle,
   chip: {
     paddingVertical: 8,
     paddingHorizontal: 14,

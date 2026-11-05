@@ -2,9 +2,11 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { api, Expense, Member } from '@/api';
-import { Button, Chip, ErrorBox, Field, Muted, Screen } from '@/components/ui';
-import { money, parseAmount } from '@/format';
+import { api, Expense, Member, PaymentMethod } from '@/api';
+import { DateField } from '@/components/DateField';
+import { PaymentMethodField } from '@/components/PaymentMethodField';
+import { Button, Chip, ErrorBox, Field, Label, Muted, Screen } from '@/components/ui';
+import { money, parseAmount, todayIso } from '@/format';
 
 export default function PaymentFormScreen() {
   const { expenseId, id } = useLocalSearchParams<{ expenseId: string; id?: string }>();
@@ -13,6 +15,8 @@ export default function PaymentFormScreen() {
   const [members, setMembers] = useState<Member[]>([]);
   const [memberId, setMemberId] = useState<number | null>(null);
   const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(editing ? '' : todayIso());
+  const [method, setMethod] = useState<PaymentMethod | null>(editing ? null : 'efectivo');
   const [available, setAvailable] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -28,19 +32,27 @@ export default function PaymentFormScreen() {
       setAvailable(avail);
       setMemberId(current?.member_id ?? null);
       setAmount(String(current?.amount ?? avail));
+      if (current) {
+        setDate(current.payment_date ?? '');
+        setMethod(current.payment_method);
+      }
     })().catch((e) => setError(e.message));
   }, [expenseId, id, editing]);
 
   async function save() {
     const value = parseAmount(amount);
     if (value === null) {
-      setError('Ingresá un monto válido mayor a 0 (hasta 2 decimales)');
+      setError('Ingresá un importe válido mayor a 0 (hasta 2 decimales)');
+      return;
+    }
+    if (!date) {
+      setError('Ingresá una fecha válida');
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const data = { member_id: memberId!, amount: value };
+      const data = { member_id: memberId!, amount: value, payment_date: date, payment_method: method };
       if (editing) await api.payments.update(Number(id), data);
       else await api.payments.create(Number(expenseId), data);
       router.back();
@@ -58,15 +70,22 @@ export default function PaymentFormScreen() {
           {expense.description}: disponible para cubrir {money(available)}
         </Muted>
       )}
-      <Muted>¿Quién pagó?</Muted>
+      <Label>¿Quién pagó?</Label>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {members.map((m) => (
           <Chip key={m.id} label={m.name} selected={memberId === m.id} onPress={() => setMemberId(m.id)} />
         ))}
       </View>
-      <Field label="Monto" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+      <DateField label="Fecha del pago" value={date} onChange={setDate} />
+      <Field label="Importe $" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+      <PaymentMethodField value={method} onChange={setMethod} />
       <ErrorBox message={error} />
-      <Button title="Guardar" onPress={save} loading={saving} disabled={memberId === null || !amount} />
+      <Button
+        title="Guardar"
+        onPress={save}
+        loading={saving}
+        disabled={memberId === null || !amount || !method}
+      />
     </Screen>
   );
 }

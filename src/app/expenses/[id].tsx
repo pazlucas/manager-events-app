@@ -1,10 +1,10 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
 
-import { api, Payment } from '@/api';
+import { api, Payment, paymentMethodLabel } from '@/api';
 import { confirm, notify } from '@/confirm';
 import { Badge, Button, Card, colors, Empty, ErrorBox, Loading, Muted, Row, Screen, Title } from '@/components/ui';
-import { money } from '@/format';
+import { formatDate, money, usd } from '@/format';
 import { useLoader } from '@/useLoader';
 
 async function loadExpense(id: number) {
@@ -58,6 +58,15 @@ export default function ExpenseDetailScreen() {
           <Title>{expense.description}</Title>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{money(expense.amount)}</Text>
         </Row>
+        <Muted>
+          {[
+            expense.expense_date && formatDate(expense.expense_date),
+            paymentMethodLabel(expense.payment_method),
+            expense.amount_usd !== null && `${usd(expense.amount_usd)} (informativo)`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </Muted>
         {(expense.created_by_email || expense.created_by_name) && (
           <Muted>Cargado por {expense.created_by_email ?? expense.created_by_name}</Muted>
         )}
@@ -96,7 +105,11 @@ export default function ExpenseDetailScreen() {
           <Row>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: '600', color: colors.text }}>{p.member_name}</Text>
-              <Muted>{money(p.amount)}</Muted>
+              <Muted>
+                {[money(p.amount), p.payment_date && formatDate(p.payment_date), paymentMethodLabel(p.payment_method)]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Muted>
             </View>
             {isOpen && (
               <Row>

@@ -26,6 +26,20 @@ export interface Member {
   name: string;
   email: string | null;
   total_paid: number;
+  /** Representa al creador del evento: no se puede quitar. */
+  is_owner: boolean;
+}
+
+export type PaymentMethod = 'efectivo' | 'credito' | 'debito';
+
+export const PAYMENT_METHODS: [PaymentMethod, string][] = [
+  ['efectivo', 'Efectivo'],
+  ['credito', 'Crédito'],
+  ['debito', 'Débito'],
+];
+
+export function paymentMethodLabel(method: PaymentMethod | null): string | null {
+  return PAYMENT_METHODS.find(([key]) => key === method)?.[1] ?? null;
 }
 
 export interface Payment {
@@ -34,13 +48,20 @@ export interface Payment {
   member_id: number;
   member_name: string;
   amount: number;
+  payment_date: string | null;
+  payment_method: PaymentMethod | null;
 }
 
 export interface Expense {
   id: number;
   event_id: number;
   description: string;
+  /** Importe en pesos: el único que se usa para pagos y resumen. */
   amount: number;
+  /** Importe en dólares, solo informativo. */
+  amount_usd: number | null;
+  expense_date: string | null;
+  payment_method: PaymentMethod | null;
   created_by_user_id: number | null;
   created_by_name: string | null;
   /** Email de la cuenta que cargó el gasto (lo completa la API). */
@@ -95,6 +116,18 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface UserLookup {
+  email: string;
+  name: string;
+}
+
+export interface InvitationInfo {
+  event_id: number;
+  event_name: string;
+  owner_name: string | null;
+  status: EventStatus;
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -142,8 +175,19 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 type EventInput = { name: string; description?: string | null; event_date?: string | null };
 type MemberInput = { name: string; email?: string | null };
-type ExpenseInput = { description: string; amount: number };
-type PaymentInput = { member_id: number; amount: number };
+type ExpenseInput = {
+  description: string;
+  amount: number;
+  amount_usd: number | null;
+  expense_date: string | null;
+  payment_method: PaymentMethod | null;
+};
+type PaymentInput = {
+  member_id: number;
+  amount: number;
+  payment_date: string | null;
+  payment_method: PaymentMethod | null;
+};
 
 export const api = {
   auth: {
@@ -152,6 +196,16 @@ export const api = {
     login: (data: { email: string; password: string }) => request<AuthResponse>('POST', '/auth/login', data),
     google: (idToken: string) => request<AuthResponse>('POST', '/auth/google', { id_token: idToken }),
     me: () => request<User>('GET', '/auth/me'),
+  },
+  users: {
+    lookup: (email: string) => request<UserLookup>('GET', `/users/lookup?email=${encodeURIComponent(email)}`),
+  },
+  invitations: {
+    /** Código del link de invitación del evento (solo el creador). */
+    token: (eventId: number, regenerate = false) =>
+      request<{ event_id: number; token: string }>('POST', `/events/${eventId}/invite${regenerate ? '?regenerate=true' : ''}`),
+    get: (token: string) => request<InvitationInfo>('GET', `/invitations/${encodeURIComponent(token)}`),
+    accept: (token: string) => request<EventItem>('POST', `/invitations/${encodeURIComponent(token)}/accept`),
   },
   events: {
     list: (role: EventRole = 'owner') => request<EventItem[]>('GET', `/events?role=${role}`),
