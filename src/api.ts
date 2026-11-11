@@ -107,6 +107,7 @@ export interface User {
   name: string;
   has_password: boolean;
   has_google: boolean;
+  has_apple: boolean;
 }
 
 export interface AuthResponse {
@@ -195,7 +196,11 @@ export const api = {
       request<AuthResponse>('POST', '/auth/register', data),
     login: (data: { email: string; password: string }) => request<AuthResponse>('POST', '/auth/login', data),
     google: (idToken: string) => request<AuthResponse>('POST', '/auth/google', { id_token: idToken }),
+    apple: (identityToken: string, name: string | null) =>
+      request<AuthResponse>('POST', '/auth/apple', { identity_token: identityToken, name }),
     me: () => request<User>('GET', '/auth/me'),
+    /** Elimina la cuenta y los eventos que creó el usuario. */
+    deleteAccount: () => request<void>('DELETE', '/auth/me'),
   },
   users: {
     lookup: (email: string) => request<UserLookup>('GET', `/users/lookup?email=${encodeURIComponent(email)}`),

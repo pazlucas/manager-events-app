@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native';
 
 import { api, EventItem } from '@/api';
 import { useAuth } from '@/auth/AuthContext';
-import { confirm } from '@/confirm';
 import { Badge, Button, Card, colors, Empty, ErrorBox, Loading, Muted, Row, Screen, Title } from '@/components/ui';
 import { formatDate, money } from '@/format';
 import { useLoader } from '@/useLoader';
@@ -15,19 +14,15 @@ async function loadEvents() {
 
 export default function EventsScreen() {
   const { data, error } = useLoader(loadEvents, []);
-  const { user, signOut } = useAuth();
-
-  async function logout() {
-    if (await confirm('Cerrar sesión', `¿Salir de la cuenta ${user?.email}?`)) await signOut();
-  }
+  const { user } = useAuth();
 
   return (
     <Screen>
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable onPress={logout} hitSlop={8} style={{ paddingHorizontal: 8 }}>
-              <Text style={{ color: colors.primary, fontWeight: '600' }}>Salir</Text>
+            <Pressable onPress={() => router.push('/account')} hitSlop={8} style={{ paddingHorizontal: 8 }}>
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>Cuenta</Text>
             </Pressable>
           ),
         }}

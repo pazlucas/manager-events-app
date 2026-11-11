@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 // Los links de invitación siempre abren la versión web, donde la persona se registra o ingresa.
 const WEB_URL = (process.env.EXPO_PUBLIC_WEB_URL ?? 'https://manager-event.netlify.app').replace(/\/$/, '');
 
+export const PRIVACY_URL = `${WEB_URL}/privacy.html`;
+
 export function inviteUrl(token: string): string {
   const base = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : WEB_URL;
   return `${base}/invite/${token}`;

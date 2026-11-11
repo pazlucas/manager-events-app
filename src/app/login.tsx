@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '@/api';
 import { useAuth } from '@/auth/AuthContext';
+import { AppleButton, useAppleAvailable } from '@/auth/AppleButton';
 import { GoogleButton, googleAvailable } from '@/auth/GoogleButton';
 import { Button, Card, colors, ErrorBox, Field, Muted, Screen } from '@/components/ui';
+import { PRIVACY_URL } from '@/invite';
 
 type Mode = 'login' | 'register';
 
@@ -41,6 +43,11 @@ export default function LoginScreen() {
   async function signInWithGoogle(idToken: string) {
     setError(null);
     await signIn(await api.auth.google(idToken));
+  }
+
+  async function signInWithApple(identityToken: string, appleName: string | null) {
+    setError(null);
+    await signIn(await api.auth.apple(identityToken, appleName));
   }
 
   function switchMode(next: Mode) {
@@ -95,14 +102,26 @@ export default function LoginScreen() {
           disabled={!canSubmit}
         />
 
-        <GoogleSection onIdToken={signInWithGoogle} onError={setError} />
+        <SocialSection onGoogle={signInWithGoogle} onApple={signInWithApple} onError={setError} />
       </Card>
+      <Pressable onPress={() => Linking.openURL(PRIVACY_URL)} style={{ alignSelf: 'center', padding: 8 }}>
+        <Text style={{ color: colors.primary }}>Política de privacidad</Text>
+      </Pressable>
     </Screen>
   );
 }
 
-function GoogleSection(props: { onIdToken: (idToken: string) => Promise<void>; onError: (m: string) => void }) {
-  if (!googleAvailable) return null;
+function SocialSection({
+  onGoogle,
+  onApple,
+  onError,
+}: {
+  onGoogle: (idToken: string) => Promise<void>;
+  onApple: (identityToken: string, name: string | null) => Promise<void>;
+  onError: (m: string) => void;
+}) {
+  const appleAvailable = useAppleAvailable();
+  if (!googleAvailable && !appleAvailable) return null;
   return (
     <>
       <View style={styles.divider}>
@@ -110,7 +129,8 @@ function GoogleSection(props: { onIdToken: (idToken: string) => Promise<void>; o
         <Muted>o</Muted>
         <View style={styles.line} />
       </View>
-      <GoogleButton {...props} />
+      {appleAvailable && <AppleButton onCredential={onApple} onError={onError} />}
+      <GoogleButton onIdToken={onGoogle} onError={onError} />
     </>
   );
 }

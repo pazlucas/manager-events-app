@@ -52,6 +52,7 @@ function RootStack() {
         <Stack.Screen name="expense-form" options={{ presentation: 'modal', title: 'Gasto' }} />
         <Stack.Screen name="payment-form" options={{ presentation: 'modal', title: 'Pago' }} />
         <Stack.Screen name="invite-share" options={{ presentation: 'modal', title: 'Invitar' }} />
+        <Stack.Screen name="account" options={{ title: 'Mi cuenta' }} />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
