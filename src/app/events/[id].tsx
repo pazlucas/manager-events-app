@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { api, EventItem, Expense, Member, paymentMethodLabel, Summary } from '@/api';
+import { api, Debt, EventItem, Expense, Member, paymentMethodLabel, Summary } from '@/api';
 import { confirm, notify } from '@/confirm';
 import {
   Badge,
@@ -27,6 +27,7 @@ interface EventData {
   members: Member[];
   expenses: Expense[];
   summary: Summary | null;
+  debts: Debt[];
 }
 
 async function loadEvent(id: number): Promise<EventData> {
@@ -36,8 +37,11 @@ async function loadEvent(id: number): Promise<EventData> {
     api.expenses.list(id),
   ]);
   // Sin miembros no hay resumen posible (la API responde 409).
-  const summary = members.length ? await api.events.summary(id) : null;
-  return { event, members, expenses, summary };
+  const [summary, debts] = await Promise.all([
+    members.length ? api.events.summary(id) : null,
+    api.debts.list(id),
+  ]);
+  return { event, members, expenses, summary, debts };
 }
 
 export default function EventDetailScreen() {
@@ -55,7 +59,7 @@ export default function EventDetailScreen() {
     );
   }
 
-  const { event, members, expenses, summary } = data;
+  const { event, members, expenses, summary, debts } = data;
   const isOpen = event.status === 'open';
   // Los miembros pueden cargar gastos y pagos; editar, cerrar o borrar el evento es solo del creador.
   const isOwner = event.role === 'owner';
@@ -75,7 +79,8 @@ export default function EventDetailScreen() {
   async function closeEvent() {
     const ok = await confirm(
       'Cerrar evento',
-      'Se calculará la liquidación final y no se podrán cargar más cambios hasta reabrirlo.',
+      'Se guardará la liquidación final y no se podrán cargar más gastos hasta reabrirlo. ' +
+        'Las deudas a saldar se pueden seguir pagando.',
     );
     if (ok) {
       await run(() => api.events.close(id));
@@ -84,7 +89,7 @@ export default function EventDetailScreen() {
   }
 
   async function reopenEvent() {
-    if (await confirm('Reabrir evento', 'Se descartará el resumen final calculado.')) {
+    if (await confirm('Reabrir evento', 'Se descartará el resumen final; las deudas y sus pagos se conservan.')) {
       await run(() => api.events.reopen(id));
     }
   }
@@ -149,7 +154,7 @@ export default function EventDetailScreen() {
         <MembersTab eventId={id} members={members} canManage={isOpen && isOwner} onChange={(a) => run(a)} />
       )}
       {tab === 'expenses' && <ExpensesTab eventId={id} expenses={expenses} members={members} isOpen={isOpen} />}
-      {tab === 'summary' && <SummaryTab summary={summary} />}
+      {tab === 'summary' && <SummaryTab summary={summary} debts={debts} />}
     </Screen>
   );
 }
@@ -264,7 +269,7 @@ function ExpensesTab({
   );
 }
 
-function SummaryTab({ summary }: { summary: Summary | null }) {
+function SummaryTab({ summary, debts }: { summary: Summary | null; debts: Debt[] }) {
   if (!summary) return <Empty text="Agregá miembros para ver el resumen." />;
   const debtors = summary.balances.filter((b) => b.balance < 0);
   const creditors = summary.balances.filter((b) => b.balance > 0);
@@ -298,18 +303,13 @@ function SummaryTab({ summary }: { summary: Summary | null }) {
         </Row>
       </Card>
 
-      <Title>Transferencias para saldar</Title>
-      {summary.transfers.length === 0 && <Empty text="No hay deudas: todos aportaron lo mismo." />}
-      {summary.transfers.map((t, i) => (
-        <Card key={i}>
-          <Row>
-            <Text style={{ color: colors.text, flex: 1 }}>
-              <Text style={{ fontWeight: '700', color: colors.danger }}>{t.from_member_name}</Text> le paga a{' '}
-              <Text style={{ fontWeight: '700', color: colors.success }}>{t.to_member_name}</Text>
-            </Text>
-            <Text style={styles.total}>{money(t.amount)}</Text>
-          </Row>
-        </Card>
+      <Title>Deudas a saldar</Title>
+      {summary.kind === 'preview' && (
+        <Muted>Se actualizan a medida que se pagan gastos o cambian los miembros. Ya se pueden ir pagando.</Muted>
+      )}
+      {debts.length === 0 && <Empty text="No hay deudas: todos aportaron lo mismo." />}
+      {debts.map((d) => (
+        <DebtCard key={d.id} debt={d} />
       ))}
 
       <Title>Detalle por miembro</Title>
@@ -339,6 +339,31 @@ function SummaryTab({ summary }: { summary: Summary | null }) {
         {debtors.length} deben abonar · {creditors.length} deben recibir
       </Muted>
     </>
+  );
+}
+
+function DebtParties({ from, to }: { from: string; to: string }) {
+  return (
+    <Text style={{ color: colors.text, flex: 1 }}>
+      <Text style={{ fontWeight: '700', color: colors.danger }}>{from}</Text> le debe a{' '}
+      <Text style={{ fontWeight: '700', color: colors.success }}>{to}</Text>
+    </Text>
+  );
+}
+
+function DebtCard({ debt: d }: { debt: Debt }) {
+  const settled = d.status === 'saldada';
+  return (
+    <Card onPress={() => router.push(`/debts/${d.id}`)}>
+      <Row>
+        <DebtParties from={d.from_member_name} to={d.to_member_name} />
+        <Text style={styles.total}>{money(d.amount)}</Text>
+      </Row>
+      <Row>
+        <Muted>{settled ? 'Pagada en su totalidad' : d.paid_amount > 0 ? `Pagado ${money(d.paid_amount)} · faltan ${money(d.pending_amount)}` : 'Sin pagos'}</Muted>
+        <Badge label={settled ? 'Saldada' : 'Pendiente'} color={settled ? colors.success : colors.warning} />
+      </Row>
+    </Card>
   );
 }
 

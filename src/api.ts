@@ -101,6 +101,35 @@ export interface Summary {
   created_at: string | null;
 }
 
+export type DebtStatus = 'pendiente' | 'saldada';
+
+export interface DebtPayment {
+  id: number;
+  debt_id: number;
+  amount: number;
+  payment_date: string | null;
+  payment_method: PaymentMethod | null;
+  created_by_email: string | null;
+}
+
+/** Deuda a saldar entre dos miembros, generada al cerrar el evento. */
+export interface Debt {
+  id: number;
+  event_id: number;
+  from_member_id: number;
+  from_member_name: string;
+  to_member_id: number;
+  to_member_name: string;
+  amount: number;
+  paid_amount: number;
+  pending_amount: number;
+  status: DebtStatus;
+  settled_at: string | null;
+  payments: DebtPayment[];
+  /** El usuario actual es el deudor, el acreedor o el creador del evento. */
+  can_pay: boolean;
+}
+
 export interface User {
   id: number;
   email: string;
@@ -183,6 +212,11 @@ type ExpenseInput = {
   expense_date: string | null;
   payment_method: PaymentMethod | null;
 };
+type DebtPaymentInput = {
+  amount: number;
+  payment_date: string | null;
+  payment_method: PaymentMethod | null;
+};
 type PaymentInput = {
   member_id: number;
   amount: number;
@@ -235,6 +269,14 @@ export const api = {
     create: (eventId: number, data: ExpenseInput) => request<Expense>('POST', `/events/${eventId}/expenses`, data),
     update: (id: number, data: Partial<ExpenseInput>) => request<Expense>('PATCH', `/expenses/${id}`, data),
     remove: (id: number) => request<void>('DELETE', `/expenses/${id}`),
+  },
+  debts: {
+    list: (eventId: number) => request<Debt[]>('GET', `/events/${eventId}/debts`),
+    get: (id: number) => request<Debt>('GET', `/debts/${id}`),
+    pay: (debtId: number, data: DebtPaymentInput) => request<DebtPayment>('POST', `/debts/${debtId}/payments`, data),
+    updatePayment: (id: number, data: Partial<DebtPaymentInput>) =>
+      request<DebtPayment>('PATCH', `/debt-payments/${id}`, data),
+    removePayment: (id: number) => request<void>('DELETE', `/debt-payments/${id}`),
   },
   payments: {
     get: (id: number) => request<Payment>('GET', `/payments/${id}`),
